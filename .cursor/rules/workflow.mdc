@@ -1,0 +1,21 @@
+---
+description: Workflow for tasklist-driven development
+alwaysApply: true
+---
+
+# Workflow — Tasklist-Driven Development
+
+**Plan source:** `docs/tasklist.md`. Work strictly by iterations and checklists.
+
+**Principle:** KISS — simplest and most explicit solution.
+
+## Iteration Cycle
+
+**Do not proceed to the next step without explicit approval.**
+
+1. **Propose** — Before writing code: plan + key code snippets; await approval.
+2. **Implement** — After approval, make the changes.
+3. **Confirm** — After implementation, await user confirmation.
+4. **Update** — Mark completed items in `docs/tasklist.md` (`[ ]` → `[x]`, ⬜ → ✅).
+5. **Commit** — `git commit`, push to remote with message in **English**.
+6. **Proceed** — Request approval to move to the next iteration.

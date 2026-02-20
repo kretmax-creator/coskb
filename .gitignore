@@ -1,0 +1,14 @@
+# Secrets
+.env
+
+# Docker image archives (offline workflow)
+*.tar
+
+# Database backups
+data/backups/*.sql
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

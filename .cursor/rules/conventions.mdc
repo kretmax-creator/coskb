@@ -1,0 +1,114 @@
+---
+description: Coskb code generation rules. vision.md has priority. See security.mdc for security rules.
+alwaysApply: true
+---
+
+# Conventions
+
+YOU ARE Cursor AI Agent working on project **Coskb**.
+
+SOURCE OF TRUTH:
+- Architecture, scope and constraints: `docs/vision.md`.
+- If anything here conflicts with `vision.md` — `vision.md` WINS.
+- Security rules: `security.mdc` (higher priority for security matters).
+
+If unsure — STOP and ASK. Do NOT assume. Do NOT improve architecture on your own.
+
+---
+
+## 1. Core Principles
+
+- Follow architecture and MVP constraints from `docs/vision.md`.
+- Prefer simple, explicit solutions over complex ones.
+- Changes must be minimal, local and justified.
+- MVP assumptions are intentional — do NOT break them silently.
+- When in doubt → ask, do not guess.
+- Before changing — briefly describe what and why.
+
+---
+
+## 2. HARD STOP — Ask for Confirmation
+
+STOP and ASK if:
+- Change violates MVP assumptions from `vision.md`
+- New component, service or dependency is required
+- Security might be weakened
+- Data loss is possible
+- Architecture needs to change
+
+---
+
+## 3. Project Structure
+
+ALLOWED: Only `docs/`, `nginx/`, `scripts/`, `data/`. New files only inside these.
+
+FORBIDDEN: New top-level folders. Restructuring without explicit request.
+
+---
+
+## 4. Docker & Infrastructure
+
+ALLOWED: `docker-compose.yml` at project root. Plain config files. Explicit, readable.
+
+FORBIDDEN: Kubernetes, Helm, Kustomize, templating, abstraction layers, hidden magic.
+
+---
+
+## 5. Configuration & Secrets
+
+ALLOWED: Env vars via `.env` file (not in git). `.env.example` as template. Document HOW to create `.env`.
+
+FORBIDDEN: Secrets in git (code, YAML, comments, examples). Hardcoded credentials. Fake/temporary/test secrets.
+
+---
+
+## 6. Database
+
+ALLOWED: Single PostgreSQL. Wiki.js manages its own schema. pgvector only in future AI scope.
+
+FORBIDDEN: Creating/modifying Wiki.js tables. Additional databases or storages. Manual schema for Wiki data.
+
+---
+
+## 7. Logging
+
+ALLOWED: stdout/stderr only (docker logs).
+
+FORBIDDEN: File-based logging. ELK, Loki, centralized logging. Logging secrets or content.
+
+---
+
+## 8. Scripts & Automation
+
+ALLOWED: Simple bash scripts. Manual execution. Deterministic, readable behavior.
+
+FORBIDDEN: Hidden side effects. Destructive actions without warning. Deleting volumes, data or secrets silently. Complex CI/CD.
+
+---
+
+## 9. Future (AI Service)
+
+- AI service ONLY if explicitly requested.
+- Python 3.11+.
+- Vectors → pgvector, separate schema.
+- NEVER mix AI logic into Wiki.js core.
+
+---
+
+## 10. ABSOLUTE PROHIBITIONS
+
+NEVER:
+- "Improve" architecture on your own
+- Prematurely optimize
+- Add features not in `vision.md`
+- Create "general" utilities without real need
+- Add HA, autoscaling, distributed storage without request
+
+---
+
+FINAL CHECK before output:
+- Does this respect `vision.md`?
+- Does this keep MVP simple?
+- Does this avoid security risks?
+
+If any "no" → STOP and ASK.

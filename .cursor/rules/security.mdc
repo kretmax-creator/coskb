@@ -1,0 +1,60 @@
+---
+description: Coskb security rules. Priority over conventions. Do NOT "improve" security on your own initiative.
+alwaysApply: true
+---
+
+# Security
+
+**Priority over conventions.** Context — `docs/vision.md`.
+
+## Principle
+
+* Follow the given rules. When in doubt about security — **STOP and ASK for confirmation**.
+* **Do NOT "improve" or "harden" security on your own initiative.** No security-hardening, WAF, etc. without explicit request.
+
+## Secrets
+
+**Required:** Secrets only via `.env` file. In documentation — *how to create* `.env`, not its contents.
+
+**Forbidden:** Hardcoding passwords, tokens, keys, DSN. Secrets in git, docker-compose.yml, examples, comments. Generating "temporary" or "test" secrets.
+
+## Access & Authentication
+
+**Allowed:** Built-in Wiki.js model only.
+
+**Forbidden:** Custom auth/authz logic. OAuth, SSO, LDAP without direct request. Weakening Wiki.js default security mechanisms.
+
+## Containers & Images
+
+**Allowed:** Official images from vision.md only (postgres:15, requarks/wiki:2, nginx:1.25).
+
+**Forbidden:** Replacing base images without approval. Multiple services in one container. Installing packages "just in case". `latest` image tags.
+
+## Docker
+
+**Forbidden:** `privileged: true`. Mounting `/` or sensitive host paths. Exposing unnecessary ports.
+
+## Network
+
+**Allowed:** Expose only Nginx (reverse proxy to Wiki.js) on port 8890.
+
+**Forbidden:** Exposing PostgreSQL externally. Additional exposed ports without request.
+
+## Data & Storage
+
+**Forbidden:** Copying DB data into containers or images. Automatic dumps without explicit request. Logging data contents or user queries.
+
+## Logging
+
+**Forbidden** to log: passwords, tokens, connection strings, article contents. **Forbidden** to add debug logging by default.
+
+## Scripts
+
+**Forbidden:** Destructive operations without explicit confirmation. Commands that delete volumes, wipe data, overwrite secrets — without warning.
+
+## Agent Behavior
+
+* Point out potential security risks in proposed changes.
+* Propose the conservative option within the given rules.
+
+**Forbidden:** "Simplifying" security for convenience. Assuming a trusted environment. Treating home-lab as justification for insecure solutions. **"Improving" security on your own initiative.**
