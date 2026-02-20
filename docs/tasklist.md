@@ -4,8 +4,8 @@
 
 | Итерация | Статус | Описание | Дата |
 |----------|--------|----------|------|
-| 0 | ⏳ В работе | Структура и документация | 20.02.2026 |
-| 1 | ⬜ Не начато | Docker Compose + сервисы | — |
+| 0 | ✅ Готово | Структура и документация | 20.02.2026 |
+| 1 | ✅ Готово | Docker Compose + сервисы | 20.02.2026 |
 | 2 | ⬜ Не начато | Скрипты | — |
 | 3 | ⬜ Не начато | README + миграция | — |
 
@@ -23,7 +23,7 @@
 - [x] Создать `docs/tasklist.md` — план разработки
 - [x] Создать `.gitignore`
 - [x] Создать `.env.example`
-- [ ] `git init` + первый коммит
+- [x] `git init` + первый коммит
 
 **Проверка:** Структура создана, документация на месте, git инициализирован.
 
@@ -33,9 +33,9 @@
 
 **Цель:** Описать стек из трёх контейнеров.
 
-- [ ] Создать `docker-compose.yml` — postgres, wikijs, nginx
-- [ ] Создать `config.yml` — Wiki.js config (`offline: true`)
-- [ ] Создать `nginx/default.conf` — reverse proxy (port 8890 → wikijs:3000)
+- [x] Создать `docker-compose.yml` — postgres, wikijs, nginx
+- [x] Создать `config.yml` — Wiki.js config (`offline: true`)
+- [x] Создать `nginx/default.conf` — reverse proxy (port 8890 → wikijs:3000)
 
 **Проверка:** `docker compose config` без ошибок; структура сервисов корректна.
 
@@ -50,7 +50,7 @@
 - [ ] `scripts/deploy.sh` — `docker compose up -d`
 - [ ] `scripts/stop.sh` — `docker compose down`
 - [ ] `scripts/backup_db.sh` — `pg_dump` через `docker exec`
-- [ ] `scripts/restore_db.sh` — восстановление дампа (xylikb → coskb)
+- [ ] `scripts/restore_db.sh` — восстановление дампа
 - [ ] `scripts/status.sh` — `docker compose ps`
 
 **Проверка:** Скрипты исполняемые, содержат `set -euo pipefail`, логика корректна.
@@ -65,7 +65,7 @@
 - [ ] README: как создать `.env` (по шаблону `.env.example`)
 - [ ] README: подготовка директории `/var/lib/coskb-data`
 - [ ] README: offline-workflow (build → load → deploy)
-- [ ] README: миграция данных из Xylikb (backup → transfer → restore)
+- [ ] README: миграция данных (backup → transfer → restore)
 - [ ] README: проверка работоспособности
 - [ ] README: бэкапы (ручной + cron)
 

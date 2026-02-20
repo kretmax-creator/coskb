@@ -1,0 +1,9 @@
+port: 3000
+db:
+  type: postgres
+  host: postgres
+  port: 5432
+  user: $(DB_USER)
+  pass: $(DB_PASS)
+  db: $(DB_NAME)
+offline: true
