@@ -36,8 +36,9 @@
 - [x] Создать `docker-compose.yml` — postgres, wikijs, nginx
 - [x] Создать `config.yml` — Wiki.js config (`offline: true`)
 - [x] Создать `nginx/default.conf` — reverse proxy (port 8890 → wikijs:3000)
+- [x] Настроить локализацию Wiki.js через sideload (`data/sideload`, volume в `docker-compose.yml`)
 
-**Проверка:** `docker compose config` без ошибок; структура сервисов корректна.
+**Проверка:** `docker compose config` без ошибок; структура сервисов корректна, Wiki.js открывается по `http://<ip>:8890`, смена языка через sideload локалей работает.
 
 ---
 
@@ -45,15 +46,15 @@
 
 **Цель:** Скрипты для управления стеком и миграции данных.
 
-- [ ] `scripts/build.sh` — `docker pull` + `docker save` для 3 образов
-- [ ] `scripts/load.sh` — `docker load` из `.tar` файлов
-- [ ] `scripts/deploy.sh` — `docker compose up -d`
-- [ ] `scripts/stop.sh` — `docker compose down`
-- [ ] `scripts/backup_db.sh` — `pg_dump` через `docker exec`
-- [ ] `scripts/restore_db.sh` — восстановление дампа
-- [ ] `scripts/status.sh` — `docker compose ps`
+- [x] `scripts/build.sh` — `docker pull` + `docker save` для 3 образов
+- [x] `scripts/load.sh` — `docker load` из `.tar` файлов
+- [x] `scripts/deploy.sh` — `docker compose up -d`
+- [x] `scripts/stop.sh` — `docker compose down`
+- [x] `scripts/backup_db.sh` — `pg_dump` через `docker exec`
+- [x] `scripts/restore_db.sh` — восстановление дампа
+- [x] `scripts/status.sh` — `docker compose ps`
 
-**Проверка:** Скрипты исполняемые, содержат `set -euo pipefail`, логика корректна.
+**Проверка:** Скрипты содержат `set -euo pipefail`, используют `docker compose`, не выполняют разрушительных действий без подтверждения (restore).
 
 ---
 
