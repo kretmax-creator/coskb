@@ -24,6 +24,7 @@ services:
       DB_NAME: ${POSTGRES_DB}
     volumes:
       - ./config.yml:/wiki/config.yml
+      - ./data:/wiki/data
     networks:
       - coskb
 
