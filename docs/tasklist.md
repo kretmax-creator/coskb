@@ -62,15 +62,16 @@
 
 **Цель:** Полная документация для развёртывания и миграции.
 
-- [ ] `README.md` — требования, подготовка, деплой
-- [ ] README: как создать `.env` (по шаблону `.env.example`)
-- [ ] README: подготовка директории `/var/lib/coskb-data`
-- [ ] README: offline-workflow (build → load → deploy)
-- [ ] README: миграция данных (backup → transfer → restore)
-- [ ] README: проверка работоспособности
-- [ ] README: бэкапы (ручной + cron)
+- [x] `README.md` — требования, подготовка, деплой
+- [x] README: как создать `.env` (по шаблону `.env.example`)
+- [x] README: подготовка директории `/var/lib/coskb-data`
+- [x] README: offline-workflow (build → load → deploy)
+- [x] README: миграция данных (backup → transfer → restore)
+- [x] README: проверка работоспособности
+- [x] README: бэкапы (ручной запуск)
+- [x] Отдельный гайд `docs/migration-xylikb.md` для первоначальной миграции из дампа `xylikb_20260220_1429.sql.migration`
 
-**Проверка:** Новый пользователь по README выполняет деплой и миграцию.
+**Проверка:** Новый пользователь по README и `docs/migration-xylikb.md` выполняет деплой и миграцию.
 
 ---
 
