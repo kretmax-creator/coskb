@@ -9,7 +9,7 @@
 | 2 | ✅ Готово | Скрипты | 24.02.2026 |
 | 3 | ✅ Готово | README + миграция | 24.02.2026 |
 | 4 | ✅ Готово | Исследование сети | 24.02.2026 |
-| 5 | ⬜ Не начато | CI/CD + документирование | — |
+| 5 | ✅ Готово | CI/CD + документирование | 24.02.2026 |
 | 6 | ⬜ Не начато | Семантический поиск (pgvector + e5-small) | — |
 | 7 | ⬜ Не начато | Гибридный поиск (FTS + vector) | — |
 | 8 | ⬜ Не начато | Telegram-бот | — |
@@ -99,19 +99,19 @@
 
 **Цель:** Описать процесс разработки и развёртывания, создать диаграммы архитектуры.
 
-- [ ] Описать CI/CD процесс в `docs/ci-cd.md`:
+- [x] Описать CI/CD процесс в `docs/ci-cd.md`:
   - Модель ветвления: `master` + `feature/<name>` → PR → merge
   - Деплой: скрипт `scripts/update.sh` (git pull → docker compose build → restart)
   - Preview-деплой feature-ветки по отдельному порту (для фич без изменения схемы БД)
-- [ ] Создать `scripts/update.sh`
-- [ ] Создать Mermaid-диаграммы в `docs/diagrams/`:
+- [x] Создать `scripts/update.sh`
+- [x] Создать Mermaid-диаграммы в `docs/diagrams/`:
   - `architecture.md` — контейнеры, сети, порты, volumes
   - `ci-cd-flow.md` — ветки → PR → merge → деплой
   - `search-sequence.md` — запрос → search-api → pgvector → результат
   - `telegram-bot-sequence.md` — сообщение → бот → search-api → ответ
-- [ ] Обновить `docs/vision.md` — новые компоненты (search-api, tg-bot, pgvector, services/)
-- [ ] Создать структуру `docs/adr/` + первый ADR (выбор pgvector + e5-small вместо Elasticsearch)
-- [ ] Обновить `.env.example` с новыми переменными
+- [x] Обновить `docs/vision.md` — новые компоненты (search-api, tg-bot, pgvector, services/)
+- [x] Создать структуру `docs/adr/` + первый ADR (выбор pgvector + e5-small вместо Elasticsearch)
+- [x] Обновить `.env.example` с новыми переменными
 
 **Проверка:** CI/CD задокументирован, `update.sh` работает, диаграммы рендерятся на GitHub.
 
