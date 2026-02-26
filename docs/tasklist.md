@@ -10,7 +10,7 @@
 | 3 | ✅ Готово | README + миграция | 24.02.2026 |
 | 4 | ✅ Готово | Исследование сети | 24.02.2026 |
 | 5 | ✅ Готово | CI/CD + документирование | 24.02.2026 |
-| 6 | ⬜ Не начато | Семантический поиск (pgvector + e5-small) | — |
+| 6 | ⏳ В работе | Семантический поиск (pgvector + e5-small) | — |
 | 7 | ⬜ Не начато | Гибридный поиск (FTS + vector) | — |
 | 8 | ⬜ Не начато | Telegram-бот | — |
 | 9 | ⬜ Не начато | Похожие статьи + дубликаты | — |
@@ -122,16 +122,16 @@
 **Цель:** Развернуть семантический поиск по статьям Wiki.js.
 
 - [ ] Бэкап БД перед сменой образа (`scripts/backup_db.sh`)
-- [ ] Заменить `postgres:15` → `pgvector/pgvector:pg15` в `docker-compose.yml`
-- [ ] Init-скрипт для PostgreSQL: `CREATE EXTENSION vector;`, схема `ai`, таблица эмбеддингов
-- [ ] Python-сервис `search-api`:
+- [x] Заменить `postgres:15` → `pgvector/pgvector:pg15` в `docker-compose.yml`
+- [x] Init-скрипт для PostgreSQL: `CREATE EXTENSION vector;`, схема `ai`, таблица эмбеддингов
+- [x] Python-сервис `search-api`:
   - `services/search-api/Dockerfile`
   - `services/search-api/requirements.txt` (fastapi, sentence-transformers, psycopg2)
   - `services/search-api/app/main.py`
   - Загрузка модели `intfloat/multilingual-e5-small`
   - `POST /index` — индексация всех статей (чтение из Wiki.js таблиц → эмбеддинги → pgvector)
   - `GET /search?q=...` — векторный поиск, top-5
-- [ ] Добавить сервис `search-api` в `docker-compose.yml` (внутренняя сеть, без внешних портов)
+- [x] Добавить сервис `search-api` в `docker-compose.yml` (внутренняя сеть, без внешних портов)
 - [ ] Тестирование на реальных данных Wiki.js
 
 **Проверка:** `POST /index` индексирует статьи; `GET /search?q=vpn` возвращает релевантные результаты.

@@ -8,7 +8,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
 IMAGES=(
-  "postgres:15"
+  "pgvector/pgvector:pg15"
   "requarks/wiki:2"
   "nginx:1.25"
 )
