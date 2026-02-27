@@ -60,6 +60,27 @@ services:
     networks:
       - coskb
 
+  tg-bot:
+    build: ./services/tg-bot
+    container_name: coskb-tg-bot
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - search-api
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      SEARCH_API_URL: http://search-api:8000
+      WIKI_BASE_URL: ${WIKI_BASE_URL:-http://172.24.120.131:8890}
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${POSTGRES_DB}
+      HEALTHCHECK_INTERVAL: ${HEALTHCHECK_INTERVAL:-300}
+    networks:
+      - coskb
+
 networks:
   coskb:
     driver: bridge
