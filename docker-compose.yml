@@ -53,6 +53,10 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${DB_PASS}
       DB_NAME: ${POSTGRES_DB}
+      HF_HOME: /models
+      HF_HUB_OFFLINE: "${HF_HUB_OFFLINE:-0}"
+    volumes:
+      - ./data/models:/models
     networks:
       - coskb
 
