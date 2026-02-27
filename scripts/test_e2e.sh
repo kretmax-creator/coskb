@@ -160,7 +160,7 @@ echo ""
 # --- 5. tg-bot ---
 echo "5. tg-bot"
 
-bot_log=$(docker logs coskb-tg-bot --tail 50 2>&1 || echo "")
+bot_log=$(docker logs coskb-tg-bot --tail 200 2>&1 || echo "")
 if echo "$bot_log" | grep -q "Application started"; then
     check "Bot started" 0
 else
