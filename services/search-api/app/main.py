@@ -66,6 +66,9 @@ def init_db():
         );
     """)
     cur.execute("""
+        ALTER TABLE ai.embeddings ADD COLUMN IF NOT EXISTS fts tsvector;
+    """)
+    cur.execute("""
         CREATE INDEX IF NOT EXISTS idx_embeddings_fts
         ON ai.embeddings USING gin(fts);
     """)
