@@ -5,6 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
+if [ -f .env ]; then
+    set -a
+    . ./.env
+    set +a
+fi
+DB_USER="${POSTGRES_USER:-coskb}"
+DB_NAME="${POSTGRES_DB:-coskb}"
+
 PASS=0
 FAIL=0
 TOTAL=0
@@ -71,13 +79,13 @@ echo ""
 # --- 2. PostgreSQL ---
 echo "2. PostgreSQL"
 
-if docker exec coskb-postgres pg_isready -U coskb -q 2>/dev/null; then
+if docker exec coskb-postgres pg_isready -U "$DB_USER" -q 2>/dev/null; then
     check "pg_isready" 0
 else
     check "pg_isready" 1
 fi
 
-row_count=$(docker exec coskb-postgres psql -U coskb -d coskb -tAc \
+row_count=$(docker exec coskb-postgres psql -U "$DB_USER" -d "$DB_NAME" -tAc \
     "SELECT COUNT(*) FROM pages WHERE \"isPublished\" = true" 2>/dev/null | tr -cd '0-9')
 if [ -n "$row_count" ] && [ "$row_count" -gt 0 ] 2>/dev/null; then
     check "Published pages exist ($row_count)" 0
@@ -85,7 +93,7 @@ else
     check "Published pages exist (${row_count:-0})" 1
 fi
 
-embed_count=$(docker exec coskb-postgres psql -U coskb -d coskb -tAc \
+embed_count=$(docker exec coskb-postgres psql -U "$DB_USER" -d "$DB_NAME" -tAc \
     "SELECT COUNT(*) FROM ai.embeddings" 2>/dev/null | tr -cd '0-9')
 if [ -n "$embed_count" ] && [ "$embed_count" -gt 0 ] 2>/dev/null; then
     check "Embeddings indexed ($embed_count)" 0
