@@ -10,6 +10,7 @@ from sentence_transformers import SentenceTransformer
 from app.config import (
     DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME,
     MODEL_NAME, EMBEDDING_DIM, TOP_K, SNIPPET_LENGTH,
+    FTS_WEIGHT, VECTOR_WEIGHT, FTS_LANGUAGE,
 )
 
 logger = logging.getLogger("search-api")
@@ -60,8 +61,13 @@ def init_db():
             path TEXT,
             content_preview TEXT,
             embedding vector({EMBEDDING_DIM}) NOT NULL,
+            fts tsvector,
             updated_at TIMESTAMP DEFAULT NOW()
         );
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_embeddings_fts
+        ON ai.embeddings USING gin(fts);
     """)
     conn.commit()
     cur.close()
@@ -135,16 +141,18 @@ def index_pages():
 
     for (page_id, title, path, content), embedding in zip(pages, embeddings):
         preview = (content or "")[:SNIPPET_LENGTH]
+        fts_text = f"{title} {content or ''}"
         cur.execute("""
-            INSERT INTO ai.embeddings (page_id, title, path, content_preview, embedding, updated_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
+            INSERT INTO ai.embeddings (page_id, title, path, content_preview, embedding, fts, updated_at)
+            VALUES (%s, %s, %s, %s, %s, to_tsvector(%s, %s), NOW())
             ON CONFLICT (page_id) DO UPDATE SET
                 title = EXCLUDED.title,
                 path = EXCLUDED.path,
                 content_preview = EXCLUDED.content_preview,
                 embedding = EXCLUDED.embedding,
+                fts = EXCLUDED.fts,
                 updated_at = NOW()
-        """, (page_id, title, path, preview, embedding.tolist()))
+        """, (page_id, title, path, preview, embedding.tolist(), FTS_LANGUAGE, fts_text))
 
     conn.commit()
     count = len(pages)
@@ -159,22 +167,56 @@ def index_pages():
 def search(
     q: str = Query(..., min_length=1, description="Search query"),
     top_k: int = Query(default=TOP_K, ge=1, le=20),
+    mode: str = Query(default="hybrid", description="Search mode: hybrid, vector, fts"),
 ):
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded yet")
 
-    query_vec = encode_query(q)
-
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT page_id, title, path, content_preview,
-               1 - (embedding <=> %s::vector) AS score
-        FROM ai.embeddings
-        ORDER BY embedding <=> %s::vector
-        LIMIT %s
-    """, (query_vec.tolist(), query_vec.tolist(), top_k))
+    if mode == "fts":
+        cur.execute("""
+            SELECT page_id, title, path, content_preview,
+                   ts_rank(fts, plainto_tsquery(%s, %s)) AS score
+            FROM ai.embeddings
+            WHERE fts @@ plainto_tsquery(%s, %s)
+            ORDER BY score DESC
+            LIMIT %s
+        """, (FTS_LANGUAGE, q, FTS_LANGUAGE, q, top_k))
+
+    elif mode == "vector":
+        query_vec = encode_query(q)
+        cur.execute("""
+            SELECT page_id, title, path, content_preview,
+                   1 - (embedding <=> %s::vector) AS score
+            FROM ai.embeddings
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+        """, (query_vec.tolist(), query_vec.tolist(), top_k))
+
+    else:
+        query_vec = encode_query(q)
+        cur.execute("""
+            WITH vec AS (
+                SELECT page_id,
+                       1 - (embedding <=> %s::vector) AS vec_score
+                FROM ai.embeddings
+            ),
+            fts AS (
+                SELECT page_id,
+                       ts_rank(fts, plainto_tsquery(%s, %s)) AS fts_score
+                FROM ai.embeddings
+            )
+            SELECT e.page_id, e.title, e.path, e.content_preview,
+                   (%s * COALESCE(fts.fts_score, 0) + %s * vec.vec_score) AS score
+            FROM ai.embeddings e
+            JOIN vec ON vec.page_id = e.page_id
+            JOIN fts ON fts.page_id = e.page_id
+            ORDER BY score DESC
+            LIMIT %s
+        """, (query_vec.tolist(), FTS_LANGUAGE, q,
+              FTS_WEIGHT, VECTOR_WEIGHT, top_k))
 
     results = []
     for row in cur.fetchall():
@@ -189,7 +231,7 @@ def search(
     cur.close()
     conn.close()
 
-    return {"query": q, "results": results}
+    return {"query": q, "mode": mode, "results": results}
 
 
 @app.get("/stats")

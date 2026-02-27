@@ -38,7 +38,7 @@ sequenceDiagram
     API-->>Client: JSON [{title, snippet, score, url}, ...]
 ```
 
-## Hybrid Search (iteration 7)
+## Hybrid Search (mode=hybrid, default)
 
 ```mermaid
 sequenceDiagram
@@ -47,18 +47,13 @@ sequenceDiagram
     participant Model as e5-small model
     participant PG as PostgreSQL
 
-    Client->>API: GET /search?q=настройка vpn
+    Client->>API: GET /search?q=настройка vpn&mode=hybrid
     API->>Model: encode("настройка vpn")
     Model-->>API: query vector
-
-    par FTS search
-        API->>PG: SELECT ... ts_rank(tsvector, query)
-        PG-->>API: fts_results[]
-    and Vector search
-        API->>PG: SELECT ... 1 - (vector <=> query_vec)
-        PG-->>API: vec_results[]
-    end
-
-    API->>API: merge scores (α·fts + β·vector)
-    API-->>Client: JSON [{title, snippet, score, url}, ...]
+    API->>PG: CTE: vec_score + fts_score → α·fts + β·vector ORDER BY score
+    PG-->>API: top-K results
+    API-->>Client: JSON [{title, snippet, score, mode}, ...]
 ```
+
+Modes: `hybrid` (default, α=0.4 β=0.6), `vector` (only embeddings), `fts` (only full-text search).
+Weights configurable via `FTS_WEIGHT` / `VECTOR_WEIGHT` environment variables.

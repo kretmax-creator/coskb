@@ -10,3 +10,7 @@ MODEL_NAME = "intfloat/multilingual-e5-small"
 EMBEDDING_DIM = 384
 TOP_K = 5
 SNIPPET_LENGTH = 300
+
+FTS_WEIGHT = float(os.environ.get("FTS_WEIGHT", "0.4"))
+VECTOR_WEIGHT = float(os.environ.get("VECTOR_WEIGHT", "0.6"))
+FTS_LANGUAGE = os.environ.get("FTS_LANGUAGE", "russian")
