@@ -158,7 +158,8 @@ fi
 echo ""
 
 # --- 5. tg-bot ---
-echo "5. tg-bot"
+echo "5. tg-bot (log checks may fail if bot has been running for a long time;"
+echo "   if FAIL — verify manually: send /start in Telegram)"
 
 bot_log_file=$(mktemp)
 docker logs coskb-tg-bot >"$bot_log_file" 2>&1 || true
@@ -166,13 +167,13 @@ docker logs coskb-tg-bot >"$bot_log_file" 2>&1 || true
 if grep -q "Application started" "$bot_log_file"; then
     check "Bot started" 0
 else
-    check "Bot started" 1
+    check "Bot started (check Telegram manually)" 1
 fi
 
 if grep -q "Scheduler started" "$bot_log_file"; then
     check "Healthcheck scheduler running" 0
 else
-    check "Healthcheck scheduler running" 1
+    check "Healthcheck scheduler running (check Telegram manually)" 1
 fi
 
 error_count=$(tail -50 "$bot_log_file" | grep -ci "traceback\|attributeerror\|runtimeerror\|importerror" || true)
