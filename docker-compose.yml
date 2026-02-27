@@ -55,6 +55,9 @@ services:
       DB_NAME: ${POSTGRES_DB}
       HF_HOME: /models
       HF_HUB_OFFLINE: "${HF_HUB_OFFLINE:-0}"
+      MIN_SCORE_HYBRID: ${MIN_SCORE_HYBRID:-0.55}
+      MIN_SCORE_VECTOR: ${MIN_SCORE_VECTOR:-0.55}
+      MIN_SCORE_FTS: ${MIN_SCORE_FTS:-0.01}
     volumes:
       - ./data/models:/models
     networks:

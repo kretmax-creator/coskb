@@ -21,6 +21,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Команды:\n"
         "/search <запрос> — поиск статей\n"
         "/read <заголовок> — полный текст статьи\n"
+        "/similar <заголовок> — похожие статьи\n"
         "/help — справка",
     )
 
@@ -30,6 +31,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>Доступные команды:</b>\n\n"
         "/search &lt;запрос&gt; — гибридный поиск по базе знаний (top-3)\n"
         "/read &lt;заголовок&gt; — полный текст статьи\n"
+        "/similar &lt;заголовок&gt; — похожие статьи\n"
         "/help — эта справка",
         parse_mode="HTML",
     )
@@ -107,6 +109,65 @@ async def read_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chunks = _split_text(header + content, MAX_MESSAGE_LENGTH)
     for chunk in chunks:
         await update.message.reply_text(chunk, parse_mode="HTML", disable_web_page_preview=True)
+
+
+async def similar_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    title = " ".join(context.args) if context.args else ""
+    if not title:
+        await update.message.reply_text("Использование: /similar <заголовок статьи>")
+        return
+
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST, port=DB_PORT,
+            user=DB_USER, password=DB_PASS, dbname=DB_NAME,
+        )
+        cur = conn.cursor()
+        cur.execute(
+            'SELECT id, title FROM pages WHERE "isPublished" = true AND title ILIKE %s LIMIT 1',
+            (f"%{title}%",),
+        )
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+    except Exception:
+        logger.exception("Database query failed")
+        await update.message.reply_text("Ошибка при обращении к базе данных.")
+        return
+
+    if not row:
+        await update.message.reply_text(f"Статья «{title}» не найдена.")
+        return
+
+    page_id, page_title = row
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                f"{SEARCH_API_URL}/similar",
+                params={"page_id": page_id, "top_k": 5},
+            )
+            resp.raise_for_status()
+        data = resp.json()
+    except Exception:
+        logger.exception("search-api /similar request failed")
+        await update.message.reply_text("Ошибка при обращении к search-api.")
+        return
+
+    items = data.get("similar", [])
+    if not items:
+        await update.message.reply_text(f"Похожих статей для «{page_title}» не найдено.")
+        return
+
+    lines = [f"Похожие на <b>{_escape_html(page_title)}</b>:\n"]
+    for r in items:
+        url = f"{WIKI_BASE_URL}/{r['path']}" if r.get("path") else ""
+        line = f"• <b>{_escape_html(r['title'])}</b> ({r['score']})"
+        if url:
+            line += f"\n  {url}"
+        lines.append(line)
+
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML", disable_web_page_preview=True)
 
 
 def _escape_html(text: str) -> str:

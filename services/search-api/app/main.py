@@ -11,6 +11,7 @@ from app.config import (
     DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME,
     MODEL_NAME, EMBEDDING_DIM, TOP_K, SNIPPET_LENGTH,
     FTS_WEIGHT, VECTOR_WEIGHT, FTS_LANGUAGE,
+    MIN_SCORE_HYBRID, MIN_SCORE_VECTOR, MIN_SCORE_FTS,
 )
 
 logger = logging.getLogger("search-api")
@@ -221,14 +222,19 @@ def search(
         """, (query_vec.tolist(), FTS_LANGUAGE, q,
               FTS_WEIGHT, VECTOR_WEIGHT, top_k))
 
+    min_score = {"hybrid": MIN_SCORE_HYBRID, "vector": MIN_SCORE_VECTOR, "fts": MIN_SCORE_FTS}.get(mode, MIN_SCORE_HYBRID)
+
     results = []
     for row in cur.fetchall():
+        score = round(float(row[4]), 4)
+        if score < min_score:
+            continue
         results.append({
             "page_id": row[0],
             "title": row[1],
             "path": row[2],
             "snippet": (row[3] or "")[:200],
-            "score": round(float(row[4]), 4),
+            "score": score,
         })
 
     cur.close()
@@ -255,3 +261,80 @@ def stats():
         "indexed_pages": count,
         "last_indexed_at": str(last_update) if last_update else None,
     }
+
+
+@app.get("/similar")
+def similar(
+    page_id: int = Query(..., description="Source page ID"),
+    top_k: int = Query(default=5, ge=1, le=20),
+):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT embedding FROM ai.embeddings WHERE page_id = %s", (page_id,))
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        raise HTTPException(status_code=404, detail="Page not found in embeddings")
+
+    source_embedding = row[0]
+
+    cur.execute("""
+        SELECT page_id, title, path, content_preview,
+               1 - (embedding <=> %s::vector) AS score
+        FROM ai.embeddings
+        WHERE page_id != %s
+        ORDER BY embedding <=> %s::vector
+        LIMIT %s
+    """, (source_embedding, page_id, source_embedding, top_k))
+
+    results = []
+    for r in cur.fetchall():
+        score = round(float(r[4]), 4)
+        if score < MIN_SCORE_VECTOR:
+            continue
+        results.append({
+            "page_id": r[0],
+            "title": r[1],
+            "path": r[2],
+            "snippet": (r[3] or "")[:200],
+            "score": score,
+        })
+
+    cur.close()
+    conn.close()
+
+    return {"page_id": page_id, "similar": results}
+
+
+@app.get("/duplicates")
+def duplicates(
+    threshold: float = Query(default=0.9, ge=0.5, le=1.0, description="Minimum similarity"),
+):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT a.page_id, a.title, b.page_id, b.title,
+               1 - (a.embedding <=> b.embedding) AS similarity
+        FROM ai.embeddings a, ai.embeddings b
+        WHERE a.page_id < b.page_id
+          AND 1 - (a.embedding <=> b.embedding) >= %s
+        ORDER BY similarity DESC
+    """, (threshold,))
+
+    pairs = []
+    for r in cur.fetchall():
+        pairs.append({
+            "page_id_1": r[0],
+            "title_1": r[1],
+            "page_id_2": r[2],
+            "title_2": r[3],
+            "score": round(float(r[4]), 4),
+        })
+
+    cur.close()
+    conn.close()
+
+    return {"threshold": threshold, "duplicates": pairs}
