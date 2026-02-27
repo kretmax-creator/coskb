@@ -160,20 +160,19 @@ echo ""
 # --- 5. tg-bot ---
 echo "5. tg-bot"
 
-bot_log=$(docker logs coskb-tg-bot --tail 200 2>&1 || echo "")
-if echo "$bot_log" | grep -q "Application started"; then
+if docker logs coskb-tg-bot 2>&1 | grep -q "Application started"; then
     check "Bot started" 0
 else
     check "Bot started" 1
 fi
 
-if echo "$bot_log" | grep -q "Scheduler started"; then
+if docker logs coskb-tg-bot 2>&1 | grep -q "Scheduler started"; then
     check "Healthcheck scheduler running" 0
 else
     check "Healthcheck scheduler running" 1
 fi
 
-error_count=$(echo "$bot_log" | grep -ci "traceback\|attributeerror\|runtimeerror\|importerror" || true)
+error_count=$(docker logs coskb-tg-bot --tail 50 2>&1 | grep -ci "traceback\|attributeerror\|runtimeerror\|importerror" || true)
 if [ "$error_count" -eq 0 ]; then
     check "No errors in recent logs" 0
 else
