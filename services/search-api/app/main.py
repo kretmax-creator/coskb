@@ -18,14 +18,18 @@ logging.basicConfig(level=logging.INFO)
 model: SentenceTransformer | None = None
 
 
-def get_connection():
-    conn = psycopg2.connect(
+def get_raw_connection():
+    return psycopg2.connect(
         host=DB_HOST,
         port=DB_PORT,
         user=DB_USER,
         password=DB_PASS,
         dbname=DB_NAME,
     )
+
+
+def get_connection():
+    conn = get_raw_connection()
     register_vector(conn)
     return conn
 
@@ -33,7 +37,7 @@ def get_connection():
 def wait_for_db(retries: int = 30, delay: float = 2.0):
     for attempt in range(1, retries + 1):
         try:
-            conn = get_connection()
+            conn = get_raw_connection()
             conn.close()
             logger.info("Database connection established")
             return
@@ -44,7 +48,7 @@ def wait_for_db(retries: int = 30, delay: float = 2.0):
 
 
 def init_db():
-    conn = get_connection()
+    conn = get_raw_connection()
     cur = conn.cursor()
     cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
     cur.execute("CREATE SCHEMA IF NOT EXISTS ai;")
@@ -92,7 +96,7 @@ def encode_passage(text: str):
 @app.get("/health")
 def health():
     try:
-        conn = get_connection()
+        conn = get_raw_connection()
         conn.close()
         db_ok = True
     except Exception:
@@ -190,7 +194,7 @@ def search(
 
 @app.get("/stats")
 def stats():
-    conn = get_connection()
+    conn = get_raw_connection()
     cur = conn.cursor()
 
     cur.execute("SELECT COUNT(*) FROM ai.embeddings")
