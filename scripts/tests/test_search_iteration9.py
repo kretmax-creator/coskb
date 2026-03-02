@@ -2,15 +2,46 @@ from __future__ import annotations
 
 import json
 import subprocess
-from pathlib import Path
 from urllib.parse import urlencode
 
 import pytest
 
 
 SEARCH_API_CONTAINER = "coskb-search-api"
-REFERENCE_FILENAME = "2025_Полезная информация.md"
 NOISE_QUERY = "zzzzzz_nonexistent_coskb_2026_qa_signal"
+
+# Test materials are extracted from 2025_Полезная информация.md
+# and embedded here to avoid runtime file dependency in tests.
+REFERENCE_SECTIONS = (
+    """
+    # Настройка подключения к VPN контура разработки и тестирования
+    Настроить подключение к необходимым VPN для подключения к контуру разработки и тестирования.
+    Сайт: cvpn.vtb.ru
+    Server address = ext.vpn.vtb.ru
+    Работа в домене DevCorp осуществляется с активным подключением к VPN ВТБ ext.
+    """.strip(),
+    """
+    # Сфера
+    Инструменты платформы Сфера размещаются в двух изолированных контурах.
+    Сфера.Задачи: https://sfera.inno.local
+    Сфера.Знания и Сфера.Документы: https://sfera.vtb.ru
+    """.strip(),
+    """
+    # Траблы Outlook
+    Outlook запрашивает данные для входа после обновления пароля к ВРМ.
+    Необходимо переключить пользователя и ввести действующий пароль.
+    """.strip(),
+    """
+    # Сакура
+    Требование по установке агента NAC Сакура распространяется на ПК,
+    с которых выполняется подключение к шлюзу vpn ext.vtb.ru.
+    При отсутствии агента NAC Сакура учетная запись может быть заблокирована.
+    """.strip(),
+    """
+    # Тех. поддержка ВТБ
+    Каналы обращения в техподдержку: spp3@vtb.ru, телефон 8 495 933 22 44.
+    """.strip(),
+)
 
 SEARCH_CASES = (
     ("vpn", "Настройка подключения к VPN", ("vpn", "cvpn", "ext")),
@@ -18,10 +49,6 @@ SEARCH_CASES = (
     ("outlook", "Траблы Outlook", ("outlook",)),
     ("сакура", "Сакура", ("сакура", "nac")),
 )
-
-
-def _project_root() -> Path:
-    return Path(__file__).resolve().parents[2]
 
 
 def _run_container_python(script: str) -> str:
@@ -127,18 +154,13 @@ def ensure_search_api_container_running() -> None:
 
 @pytest.fixture(scope="session")
 def reference_sections() -> list[str]:
-    reference_path = _project_root() / REFERENCE_FILENAME
-    if not reference_path.exists():
-        pytest.fail(f"Reference file not found: {reference_path}")
-
-    text = reference_path.read_text(encoding="utf-8")
-    sections = [chunk.strip() for chunk in text.split("-----") if chunk.strip()]
+    sections = [chunk.strip() for chunk in REFERENCE_SECTIONS if chunk.strip()]
     if not sections:
-        pytest.fail(f"No sections found in {REFERENCE_FILENAME} with delimiter '-----'")
+        pytest.fail("Embedded reference sections are empty.")
     return sections
 
 
-def test_reference_file_sections_loaded(reference_sections: list[str]) -> None:
+def test_reference_materials_loaded(reference_sections: list[str]) -> None:
     assert len(reference_sections) >= 5
 
 
