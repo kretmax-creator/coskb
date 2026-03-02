@@ -40,7 +40,16 @@ SEARCH_CASES_STRICT = (
     ("токен", "Токен", ("токен", "rutoken")),
 )
 
-SEARCH_QUERIES_SMOKE = ("vpn", "cvpn", "devcorp", "сфера", "outlook", "сакура", "иннотех", "токен")
+SEARCH_CASES_EXTENDED_RELEVANCE = (
+    ("devcorp", "Настройка подключения к VPN", ("devcorp", "ext")),
+    ("vpn ext", "Настройка подключения к VPN", ("vpn", "ext")),
+    ("sfera", "Сфера", ("sfera", "сфера")),
+    ("rutoken", "Токен", ("rutoken", "токен")),
+    ("spp3", "Тех. поддержка ВТБ", ("spp3", "поддерж")),
+    ("гк иннотех", "УЗ ГК Иннотех", ("иннотех", "inno")),
+)
+
+SEARCH_QUERIES_SMOKE = ("vpn", "devcorp", "сфера", "outlook", "сакура", "иннотех", "токен")
 
 
 def _run_container_python(script: str) -> str:
@@ -252,6 +261,56 @@ def test_search_relevant_queries_from_reference_sections(
     assert any(term in searchable_blob for term in expected_terms), (
         f"Results for query '{query}' do not look relevant. "
         f"Expected one of: {expected_terms}. Payload: {payload}"
+    )
+
+
+@pytest.mark.parametrize("query, section_marker, expected_terms", SEARCH_CASES_EXTENDED_RELEVANCE)
+def test_search_extended_relevance_queries_from_reference_sections(
+    reference_sections: list[str],
+    indexed_stats: dict,
+    query: str,
+    section_marker: str,
+    expected_terms: tuple[str, ...],
+) -> None:
+    _ = indexed_stats
+    section_text = _find_section_by_marker(reference_sections, section_marker)
+    assert section_text
+    payload = _search_api_get("/search", q=query, mode="hybrid", top_k=5)
+    results = _extract_first_list(payload, "results")
+    assert results, f"Expected non-empty search results for extended relevance query: {query}"
+    searchable_blob = " ".join(
+        f"{item.get('title', '')} {item.get('snippet', '')} {item.get('path', '')}".lower()
+        for item in results
+        if isinstance(item, dict)
+    )
+    assert any(term in searchable_blob for term in expected_terms), (
+        f"Extended relevance query '{query}' does not contain expected signal. "
+        f"Expected one of: {expected_terms}. Payload: {payload}"
+    )
+
+
+@pytest.mark.parametrize("query", ("vpn", "сфера", "outlook", "токен"))
+def test_search_lexical_relevance_overlap_between_hybrid_and_fts(indexed_stats: dict, query: str) -> None:
+    _ = indexed_stats
+    hybrid_payload = _search_api_get("/search", q=query, mode="hybrid", top_k=5)
+    fts_payload = _search_api_get("/search", q=query, mode="fts", top_k=5)
+    hybrid_results = _extract_first_list(hybrid_payload, "results")
+    fts_results = _extract_first_list(fts_payload, "results")
+    assert hybrid_results, f"Hybrid mode returned no results for lexical query: {query}"
+    assert fts_results, f"FTS mode returned no results for lexical query: {query}"
+    hybrid_ids = {
+        item.get("page_id")
+        for item in hybrid_results
+        if isinstance(item, dict) and isinstance(item.get("page_id"), int)
+    }
+    fts_ids = {
+        item.get("page_id")
+        for item in fts_results
+        if isinstance(item, dict) and isinstance(item.get("page_id"), int)
+    }
+    assert hybrid_ids & fts_ids, (
+        f"Expected overlap between hybrid and fts for query '{query}'. "
+        f"hybrid_ids={hybrid_ids}, fts_ids={fts_ids}"
     )
 
 
