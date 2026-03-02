@@ -7,6 +7,7 @@ from fastapi import FastAPI, Query, HTTPException
 from pgvector.psycopg2 import register_vector
 from sentence_transformers import SentenceTransformer
 
+from app.aliases import expand_query
 from app.config import (
     DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME,
     MODEL_NAME, EMBEDDING_DIM, TOP_K, SNIPPET_LENGTH,
@@ -176,21 +177,35 @@ def search(
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded yet")
 
+    original_q, rewritten_q = expand_query(q)
+    vector_text = f"{q} {rewritten_q}" if rewritten_q else q
+
     conn = get_connection()
     cur = conn.cursor()
 
     if mode == "fts":
-        cur.execute("""
-            SELECT page_id, title, path, content_preview,
-                   ts_rank(fts, plainto_tsquery(%s, %s)) AS score
-            FROM ai.embeddings
-            WHERE fts @@ plainto_tsquery(%s, %s)
-            ORDER BY score DESC
-            LIMIT %s
-        """, (FTS_LANGUAGE, q, FTS_LANGUAGE, q, top_k))
+        if rewritten_q:
+            cur.execute("""
+                SELECT page_id, title, path, content_preview,
+                       ts_rank(fts, plainto_tsquery(%s, %s) || plainto_tsquery(%s, %s)) AS score
+                FROM ai.embeddings
+                WHERE fts @@ (plainto_tsquery(%s, %s) || plainto_tsquery(%s, %s))
+                ORDER BY score DESC
+                LIMIT %s
+            """, (FTS_LANGUAGE, q, FTS_LANGUAGE, rewritten_q,
+                  FTS_LANGUAGE, q, FTS_LANGUAGE, rewritten_q, top_k))
+        else:
+            cur.execute("""
+                SELECT page_id, title, path, content_preview,
+                       ts_rank(fts, plainto_tsquery(%s, %s)) AS score
+                FROM ai.embeddings
+                WHERE fts @@ plainto_tsquery(%s, %s)
+                ORDER BY score DESC
+                LIMIT %s
+            """, (FTS_LANGUAGE, q, FTS_LANGUAGE, q, top_k))
 
     elif mode == "vector":
-        query_vec = encode_query(q)
+        query_vec = encode_query(vector_text)
         cur.execute("""
             SELECT page_id, title, path, content_preview,
                    1 - (embedding <=> %s::vector) AS score
@@ -200,27 +215,49 @@ def search(
         """, (query_vec.tolist(), query_vec.tolist(), top_k))
 
     else:
-        query_vec = encode_query(q)
-        cur.execute("""
-            WITH vec AS (
-                SELECT page_id,
-                       1 - (embedding <=> %s::vector) AS vec_score
-                FROM ai.embeddings
-            ),
-            fts AS (
-                SELECT page_id,
-                       ts_rank(fts, plainto_tsquery(%s, %s)) AS fts_score
-                FROM ai.embeddings
-            )
-            SELECT e.page_id, e.title, e.path, e.content_preview,
-                   (%s * COALESCE(fts.fts_score, 0) + %s * vec.vec_score) AS score
-            FROM ai.embeddings e
-            JOIN vec ON vec.page_id = e.page_id
-            JOIN fts ON fts.page_id = e.page_id
-            ORDER BY score DESC
-            LIMIT %s
-        """, (query_vec.tolist(), FTS_LANGUAGE, q,
-              FTS_WEIGHT, VECTOR_WEIGHT, top_k))
+        query_vec = encode_query(vector_text)
+        if rewritten_q:
+            cur.execute("""
+                WITH vec AS (
+                    SELECT page_id,
+                           1 - (embedding <=> %s::vector) AS vec_score
+                    FROM ai.embeddings
+                ),
+                fts AS (
+                    SELECT page_id,
+                           ts_rank(fts, plainto_tsquery(%s, %s) || plainto_tsquery(%s, %s)) AS fts_score
+                    FROM ai.embeddings
+                )
+                SELECT e.page_id, e.title, e.path, e.content_preview,
+                       (%s * COALESCE(fts.fts_score, 0) + %s * vec.vec_score) AS score
+                FROM ai.embeddings e
+                JOIN vec ON vec.page_id = e.page_id
+                JOIN fts ON fts.page_id = e.page_id
+                ORDER BY score DESC
+                LIMIT %s
+            """, (query_vec.tolist(), FTS_LANGUAGE, q, FTS_LANGUAGE, rewritten_q,
+                  FTS_WEIGHT, VECTOR_WEIGHT, top_k))
+        else:
+            cur.execute("""
+                WITH vec AS (
+                    SELECT page_id,
+                           1 - (embedding <=> %s::vector) AS vec_score
+                    FROM ai.embeddings
+                ),
+                fts AS (
+                    SELECT page_id,
+                           ts_rank(fts, plainto_tsquery(%s, %s)) AS fts_score
+                    FROM ai.embeddings
+                )
+                SELECT e.page_id, e.title, e.path, e.content_preview,
+                       (%s * COALESCE(fts.fts_score, 0) + %s * vec.vec_score) AS score
+                FROM ai.embeddings e
+                JOIN vec ON vec.page_id = e.page_id
+                JOIN fts ON fts.page_id = e.page_id
+                ORDER BY score DESC
+                LIMIT %s
+            """, (query_vec.tolist(), FTS_LANGUAGE, q,
+                  FTS_WEIGHT, VECTOR_WEIGHT, top_k))
 
     min_score = {"hybrid": MIN_SCORE_HYBRID, "vector": MIN_SCORE_VECTOR, "fts": MIN_SCORE_FTS}.get(mode, MIN_SCORE_HYBRID)
 
