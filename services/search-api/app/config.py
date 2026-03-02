@@ -15,6 +15,6 @@ FTS_WEIGHT = float(os.environ.get("FTS_WEIGHT", "0.4"))
 VECTOR_WEIGHT = float(os.environ.get("VECTOR_WEIGHT", "0.6"))
 FTS_LANGUAGE = os.environ.get("FTS_LANGUAGE", "russian")
 
-MIN_SCORE_HYBRID = float(os.environ.get("MIN_SCORE_HYBRID", "0.35"))
+MIN_SCORE_HYBRID = float(os.environ.get("MIN_SCORE_HYBRID", "0.52"))
 MIN_SCORE_VECTOR = float(os.environ.get("MIN_SCORE_VECTOR", "0.55"))
 MIN_SCORE_FTS = float(os.environ.get("MIN_SCORE_FTS", "0.001"))
