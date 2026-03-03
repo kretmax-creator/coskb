@@ -74,10 +74,19 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_embeddings_fts
         ON ai.embeddings USING gin(fts);
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS ai.search_log (
+            id SERIAL PRIMARY KEY,
+            query TEXT NOT NULL,
+            mode TEXT NOT NULL,
+            results_count INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+    """)
     conn.commit()
     cur.close()
     conn.close()
-    logger.info("Database schema initialized (ai.embeddings)")
+    logger.info("Database schema initialized (ai.embeddings, ai.search_log)")
 
 
 @asynccontextmanager
@@ -274,6 +283,15 @@ def search(
             "score": score,
         })
 
+    results_count = len(results)
+    try:
+        cur.execute(
+            "INSERT INTO ai.search_log (query, mode, results_count) VALUES (%s, %s, %s)",
+            (q, mode, results_count),
+        )
+        conn.commit()
+    except Exception as e:
+        logger.warning("Failed to log search: %s", e)
     cur.close()
     conn.close()
 
@@ -298,6 +316,39 @@ def stats():
         "indexed_pages": count,
         "last_indexed_at": str(last_update) if last_update else None,
     }
+
+
+@app.get("/search-stats")
+def search_stats(
+    top_limit: int = Query(default=10, ge=1, le=50, description="Max top queries"),
+    zero_limit: int = Query(default=10, ge=1, le=50, description="Max zero-result queries"),
+):
+    conn = get_raw_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT query, mode, COUNT(*) AS cnt
+        FROM ai.search_log
+        GROUP BY query, mode
+        ORDER BY cnt DESC
+        LIMIT %s
+    """, (top_limit,))
+    top_queries = [{"query": r[0], "mode": r[1], "count": r[2]} for r in cur.fetchall()]
+
+    cur.execute("""
+        SELECT query, mode, COUNT(*) AS cnt
+        FROM ai.search_log
+        WHERE results_count = 0
+        GROUP BY query, mode
+        ORDER BY cnt DESC
+        LIMIT %s
+    """, (zero_limit,))
+    zero_result_queries = [{"query": r[0], "mode": r[1], "count": r[2]} for r in cur.fetchall()]
+
+    cur.close()
+    conn.close()
+
+    return {"top_queries": top_queries, "zero_result_queries": zero_result_queries}
 
 
 @app.get("/similar")

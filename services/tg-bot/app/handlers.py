@@ -22,6 +22,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/search <запрос> — поиск статей\n"
         "/read <заголовок> — полный текст статьи\n"
         "/similar <заголовок> — похожие статьи\n"
+        "/stats — статистика поиска\n"
         "/help — справка",
     )
 
@@ -32,6 +33,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/search &lt;запрос&gt; — гибридный поиск по базе знаний (top-3)\n"
         "/read &lt;заголовок&gt; — полный текст статьи\n"
         "/similar &lt;заголовок&gt; — похожие статьи\n"
+        "/stats — статистика поисковых запросов\n"
         "/help — эта справка",
         parse_mode="HTML",
     )
@@ -168,6 +170,37 @@ async def similar_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append(line)
 
     await update.message.reply_text("\n".join(lines), parse_mode="HTML", disable_web_page_preview=True)
+
+
+async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(f"{SEARCH_API_URL}/search-stats")
+            resp.raise_for_status()
+        data = resp.json()
+    except Exception:
+        logger.exception("search-api /search-stats request failed")
+        await update.message.reply_text("Ошибка при обращении к search-api.")
+        return
+
+    top = data.get("top_queries", [])[:5]
+    zero = data.get("zero_result_queries", [])[:5]
+
+    lines = ["<b>Статистика поиска</b>\n"]
+    if top:
+        lines.append("Частые запросы:")
+        for r in top:
+            lines.append(f"  • {_escape_html(r['query'])} ({r['mode']}) — {r['count']}")
+    else:
+        lines.append("Частые запросы: нет данных.")
+    if zero:
+        lines.append("\nЗапросы без результатов:")
+        for r in zero:
+            lines.append(f"  • {_escape_html(r['query'])} ({r['mode']}) — {r['count']}")
+    else:
+        lines.append("\nЗапросы без результатов: нет.")
+
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
 
 
 def _escape_html(text: str) -> str:
